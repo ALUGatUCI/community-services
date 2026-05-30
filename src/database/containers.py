@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from sqlalchemy import func
 from sqlmodel import select, delete
 
@@ -7,6 +9,7 @@ from database.models import Container
 import database.database as database
 from containers.core import client
 from security.shacrypt512 import shacrypt
+from src.containers.containers import httpx_client
 
 
 async def create_new_container(account_id: int):
@@ -85,6 +88,11 @@ async def create_new_container(account_id: int):
     }
 
     instance = client.containers.create(container_config, wait=True)
+
+    # Verify the instance has been created
+    if ucinetid not in [c.name for c in instance.containers.all()]:
+        raise RuntimeError(f"Failed to create container: {ucinetid} not found in container list")
+
     instance.start()
 
 def delete_container(ucinetid: str):
