@@ -14,6 +14,7 @@ Server backend software for managing remote Linux LXC containers
 - Implement email-based 2FA
 - Cleaner web user interface (UI/UX)
 - Implement Pocketbase support to prevent duplicate account creation across different sessions
+- Switch over to Docker Compose
 
 ## Setting up a configuration
 You will need a `.env` file to run in the same directory as `alugvps-server.py`. Here are the environment variables to specify in `.env`:
