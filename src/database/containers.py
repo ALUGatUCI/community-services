@@ -22,24 +22,6 @@ async def create_new_container(account_id: int):
     if account is None:
         raise ValueError(f"No account found with ID {account_id}")
 
-    # Calculate the SSH port forwarding number
-    # We need to make it so that removing or deleting containers will not result in port collision
-    # by checking the maximum existing SSH port and incrementing from there
-    max_ssh_port = session.execute(select(func.max(Container.ssh_port))).one()[0]
-    next_ssh_port = 10000 if max_ssh_port is None else max_ssh_port + 10
-
-    new_container = Container(
-        id = account_id,
-        ssh_port = next_ssh_port,
-        forward_ports = list(range(next_ssh_port + 1, next_ssh_port + 10))
-    )
-
-    # Add the container data to the table
-
-    session.add(new_container)
-    session.commit()
-    session.refresh(new_container)
-
     ucinetid = account.email[:account.email.find("@")]
     hashed_password = shacrypt(account.confirmation_code.encode('utf-8')) # Use the confirmation code as the temp password
 
@@ -90,10 +72,29 @@ async def create_new_container(account_id: int):
     instance = client.containers.create(container_config, wait=True)
 
     # Verify the instance has been created
-    if ucinetid not in [c.name for c in instance.containers.all()]:
+    if ucinetid is None:
         raise RuntimeError(f"Failed to create container: {ucinetid} not found in container list")
 
+    # Start the instance
     instance.start()
+
+    # Calculate the SSH port forwarding number
+    # We need to make it so that removing or deleting containers will not result in port collision
+    # by checking the maximum existing SSH port and incrementing from there
+    max_ssh_port = session.execute(select(func.max(Container.ssh_port))).one()[0]
+    next_ssh_port = 10000 if max_ssh_port is None else max_ssh_port + 10
+
+    new_container = Container(
+        id = account_id,
+        ssh_port = next_ssh_port,
+        forward_ports = list(range(next_ssh_port + 1, next_ssh_port + 10))
+    )
+
+    # Add the container data to the table
+
+    session.add(new_container)
+    session.commit()
+    session.refresh(new_container)
 
 def delete_container(ucinetid: str):
     """Deletes the container associated with the given UCINETID."""
