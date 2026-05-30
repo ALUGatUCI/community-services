@@ -13,7 +13,7 @@ Server backend software for managing remote Linux LXC containers
 ## Things that must be implemented:
 - Implement email-based 2FA
 - Cleaner web user interface (UI/UX)
-- Implement Supabase support to prevent duplicate account creation across different sessions
+- Implement Pocketbase support to prevent duplicate account creation across different sessions
 
 ## Setting up a configuration
 You will need a `.env` file to run in the same directory as `alugvps-server.py`. Here are the environment variables to specify in `.env`:
