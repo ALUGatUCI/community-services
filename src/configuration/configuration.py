@@ -3,7 +3,11 @@ import os
 
 dotenv.load_dotenv()
 
-def verify_config():
+# Cache environment variables to avoid reading from the environment multiple times
+# and improve performance (changes will require a restart however, but it's worth it)
+cached_keys = dict()
+
+def _verify_config():
     # Verify that all required environment variables are set
     required_keys = [
         "secret_key", # Use this command to generate a secret key: openssl rand -hex 32
@@ -23,5 +27,12 @@ def verify_config():
         if not os.getenv(key):
             raise ValueError(f"Missing required configuration key: {key}")
 
+def cache_config():
+    global cached_keys
+
+    _verify_config()
+    for key in os.environ:
+        cached_keys[key] = os.getenv(key)
+
 def read_config_file(key: str):
-    return os.getenv(key)
+    return cached_keys.get(key)
