@@ -21,6 +21,9 @@ def _verify_config():
         "email_key",
         "smtp_host",
         "smtp_port",
+        "pocketbase_url",
+        "pocketbase_username",
+        "pocketbase_password",
     ]
 
     for key in required_keys:
