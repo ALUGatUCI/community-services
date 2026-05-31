@@ -9,6 +9,7 @@ import database.database as database
 from database.database import create_db_and_tables
 from database.models import Request, Account
 from database.containers import create_new_container
+from database.requests import get_request_by_id
 from containers.containers import suspend_container_by_ucinetid, unsuspend_container_by_ucinetid, delete_container_by_ucinetid
 from configuration import configuration
 
@@ -23,7 +24,7 @@ arguments = sys.argv
 async def entry_point():
     if len(arguments) == 3:
         if arguments[1] == "view": # View a request with the given ID
-            request = session.get(Request, int(arguments[2]))
+            request = get_request_by_id(int(arguments[2]))
             if request is not None:
                 print(f"ID: {request.id}\nBody: {request.request}\n\n")
             else:
