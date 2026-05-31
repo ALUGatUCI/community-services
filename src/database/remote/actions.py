@@ -31,10 +31,10 @@ def update_user(email: str, is_confirmed: bool, is_banned: bool):
     else:
         raise ValueError(f"User with email {email} not found")
 
-def get_user(email: str):
+def get_user(email: str) -> dict | None:
     collection = bridge.get_collection(read_config_file("pocketbase_collection"))
     records = collection.get_list(1, 1, {"email": email})
     if records.items:
         return records.items[0]
-    else:
-        raise ValueError(f"User with email {email} not found")
+
+    return None
