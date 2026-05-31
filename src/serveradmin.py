@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+from webbrowser import get
+
 import sqlmodel
 from sqlmodel import select, func
 import sys
@@ -20,6 +22,7 @@ from containers.containers import (
     delete_container_by_ucinetid,
     get_container_count,
 )
+from accounts.accounts import get_all_accounts
 from configuration import configuration
 
 # Create the database engine and session
@@ -66,7 +69,7 @@ async def entry_point():
                 for request in requests:
                     print(f"ID: {request.id}\nBody: {request.request}\n\n")
             elif arguments[2] == "users":
-                users = session.exec(sqlmodel.select(Account)).all()
+                users = get_all_accounts()
                 for user in users:
                     print(f"ID: {user.id}\nEmail: {user.email}\nBanned: {user.banned}\nConfirmed: {user.confirmed}\n\n")
             else:
