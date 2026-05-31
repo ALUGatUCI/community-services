@@ -1,4 +1,3 @@
-import string
 from typing import Annotated
 
 import fastapi
@@ -21,8 +20,7 @@ from database.remote.actions import get_user, update_user
 from database.requests import create_request
 from database.accounts import get_all_accounts_db
 
-
-from security import verify_credentials
+from security import verify_credentials, validate_password
 
 router = fastapi.APIRouter()
 
@@ -140,35 +138,10 @@ async def create_account(account: Annotated[OAuth2PasswordRequestForm, fastapi.D
         raise fastapi.HTTPException(status_code=400, detail="Email address already exists")
 
     # Now validate the password
-    if account.password.strip() == "":
-        raise fastapi.HTTPException(status_code=400, detail="Password is required")
-
-    if len(account.password) < 8:
-        raise fastapi.HTTPException(status_code=400, detail="Password is too short")
-
-    if not any(c.islower() for c in account.password):
-        raise fastapi.HTTPException(
-            status_code=400,
-            detail="Password must contain at least one lowercase character"
-        )
-
-    if not any(c.isupper() for c in account.password):
-        raise fastapi.HTTPException(
-            status_code=400,
-            detail="Password must contain at least one uppercase character"
-        )
-
-    if not any(c.isdigit() for c in account.password):
-        raise fastapi.HTTPException(
-            status_code=400,
-            detail="Password must contain at least one digit"
-        )
-
-    if not any(c in string.punctuation for c in account.password):
-        raise fastapi.HTTPException(
-            status_code=400,
-            detail="Password must contain at least one punctuation"
-        )
+    try:
+        validate_password(account.password)
+    except Exception as e:
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
     remote_user = get_user(account.username)
     if remote_user is not None and remote_user["hasContainer"]:
