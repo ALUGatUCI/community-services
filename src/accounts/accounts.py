@@ -17,7 +17,7 @@ from accounts.body import ConfirmationCode, ContainerRequest
 from accounts.responses import AccountConfirmed
 from security import check_confirmation_status, discard_token
 from containers.containers import get_container_by_ucinetid
-from database.remote.actions import get_user
+from database.remote.actions import get_user, update_user
 
 
 from security import verify_credentials
@@ -45,6 +45,8 @@ async def confirm_account(token: Request, inputted_code: ConfirmationCode = Depe
     # Assuming all checks pass, changed their confirmed status and create container
     result.confirmed = True
     session.commit()
+
+    update_user(f"{ucinetid}@uci.edu", is_confirmed=True)
 
     return fastapi.Response(status_code=201)
 
