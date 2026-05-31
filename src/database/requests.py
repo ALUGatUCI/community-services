@@ -5,6 +5,9 @@ from sqlmodel import select
 def get_request_by_id(request_id: int) -> RequestModel | None:
     return session.get(RequestModel, request_id)
 
+def get_all_requests() -> list[RequestModel]:
+    return session.exec(select(RequestModel)).all()
+
 def create_request(ucinetid: str, request: ContainerRequest):
     acc_id = session.exec(select(Account.id).where(Account.email == f"{ucinetid}@uci.edu")).first()
     # Validate the request is valid
@@ -18,3 +21,9 @@ def create_request(ucinetid: str, request: ContainerRequest):
     new_request = RequestModel(id=acc_id, request=request.request_body)
     session.add(new_request)
     session.commit()
+
+def delete_request(request_id: int):
+    request = session.get(RequestModel, request_id)
+    if request is not None:
+        session.delete(request)
+        session.commit()

@@ -9,7 +9,11 @@ import database.database as database
 from database.database import create_db_and_tables
 from database.models import Request, Account
 from database.containers import create_new_container
-from database.requests import get_request_by_id
+from database.requests import (
+    get_request_by_id,
+    delete_request,
+    get_all_requests,
+)
 from containers.containers import (
     suspend_container_by_ucinetid,
     unsuspend_container_by_ucinetid,
@@ -42,7 +46,7 @@ async def entry_point():
                     print("Account limit on server reached")
                     sys.exit(1)
 
-            request = session.get(Request, int(arguments[2]))
+            request = get_request_by_id(int(arguments[2]))
             if request is not None:
                 # Create the container
                 try:
@@ -53,13 +57,12 @@ async def entry_point():
                     sys.exit(1)
 
                 print(f"Approved request with ID {arguments[2]}")
-                session.delete(request)
-                session.commit()
+                delete_request(int(arguments[2]))
             else:
                 print(f"No request found with ID {arguments[2]}")
         if arguments[1] == "list": # List all requests or users
             if arguments[2] == "requests":
-                requests = session.exec(sqlmodel.select(Request)).all()
+                requests = get_all_requests()
                 for request in requests:
                     print(f"ID: {request.id}\nBody: {request.request}\n\n")
             elif arguments[2] == "users":
