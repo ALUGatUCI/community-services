@@ -1,3 +1,4 @@
+import string
 from sqlmodel import select
 
 from configuration import configuration
@@ -52,6 +53,33 @@ def verify_credentials(request: Request):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token is discarded")
 
     return ucinetid
+
+def validate_password(password: str):
+    if password.strip() == "":
+        raise Exception("Password is required")
+
+    if len(password) < 8:
+        raise Exception("Password is too short")
+
+    if not any(c.islower() for c in password):
+        raise Exception(
+            "Password must contain at least one lowercase character"
+        )
+
+    if not any(c.isupper() for c in password):
+        raise Exception(
+            "Password must contain at least one uppercase character"
+        )
+
+    if not any(c.isdigit() for c in password):
+        raise Exception(
+            "Password must contain at least one digit"
+        )
+
+    if not any(c in string.punctuation for c in password):
+        raise Exception(
+            "Password must contain at least one punctuation"
+        )
 
 def check_confirmation_status(ucinetid: str):
     session = database.session
