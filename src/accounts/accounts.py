@@ -143,7 +143,17 @@ async def create_account(account: Annotated[OAuth2PasswordRequestForm, fastapi.D
     except Exception as e:
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
+    # Check if the account is already registered on another instance and has a container
     remote_user = get_user(account.username)
+
+    # Check if the account is banned on another instance
+    # If the account is banned, raise an exception and do not register the account
+    if remote_user is not None and remote_user["banned"]:
+        raise fastapi.HTTPException(
+            status_code=400,
+            detail="Email is banned from registration"
+        )
+
     if remote_user is not None and remote_user["hasContainer"]:
         raise fastapi.HTTPException(
             status_code=400,
