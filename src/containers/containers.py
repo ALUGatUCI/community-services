@@ -10,6 +10,7 @@ import database.database as database
 from fastapi import Request
 import security
 from containers.body import AddPort, RemovePort
+from database.containers import get_container_count as get_container_count_db
 from containers.core import client
 from database.models import Account, Container
 from database.remote.actions import update_user
@@ -63,7 +64,7 @@ async def delete_container_by_ucinetid(ucinetid: str):
     update_user(f"{ucinetid}@uci.edu", has__container=False)
 
 def get_container_count() -> int:
-    return len(client.containers.list())
+    return get_container_count_db()
 
 def _get_forward_ports(container: client.containers):
     used_ports = []
