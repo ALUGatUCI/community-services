@@ -20,14 +20,17 @@ def delete_user(email: str):
     else:
         raise ValueError(f"User with email {email} not found")
 
-def update_user(email: str, is_confirmed: bool, is_banned: bool):
+def update_user(email: str, is_confirmed: bool | None = None, is_banned: bool | None = None):
     collection = bridge.get_collection(read_config_file("pocketbase_collection"))
     records = collection.get_list(1, 1, {"email": email})
     if records.items:
-        collection.update(records.items[0].id, {
-            "isConfirmed": is_confirmed,
-            "isBanned": is_banned,
-        })
+        data = {}
+        if is_confirmed is not None:
+            data["isConfirmed"] = is_confirmed
+        if is_banned is not None:
+            data["isBanned"] = is_banned
+
+        collection.update(records.items[0].id, data)
     else:
         raise ValueError(f"User with email {email} not found")
 
