@@ -18,6 +18,7 @@ from accounts.responses import AccountConfirmed
 from security import check_confirmation_status, discard_token
 from containers.containers import get_container_by_ucinetid
 from database.remote.actions import get_user, update_user
+from database.requests import create_request
 
 
 from security import verify_credentials
@@ -104,20 +105,10 @@ async def request_container(token: Request, request: ContainerRequest):
     if await get_container_by_ucinetid(ucinetid) is not None:
         raise fastapi.HTTPException(status_code=400, detail="User already has a container")
 
-    session = database.session
-
-    acc_id = session.exec(select(Account.id).where(Account.email == f"{ucinetid}@uci.edu")).first()
-    # Validate the request is valid
-    if session.exec(select(RequestModel.id).where(RequestModel.id == acc_id)).first() is not None:
-        raise fastapi.HTTPException(status_code=400, detail="You already have a pending request")
-
-    req_len = len(request.request_body.strip())
-    if req_len < 300 or req_len > 1000:
-        raise fastapi.HTTPException(status_code=400, detail="A minimum of 300 characters is required")
-
-    new_request = RequestModel(id=acc_id, request=request.request_body)
-    session.add(new_request)
-    session.commit()
+    try:
+        create_request(ucinetid, request)
+    except Exception as e:
+        raise fastapi.HTTPException(status_code=400, detail=f"Request failed: {e}")
 
     return fastapi.Response(status_code=201)
 
