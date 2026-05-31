@@ -1,5 +1,5 @@
-# alugvps-server
-Server backend software for managing remote Linux LXC containers
+# ALUG@UCI Community Services
+This project provides the software-side aspect of ALUG@UCI Community Services, which provisions free LXD containers on a request-basis and enables ALUG@UCI members to host services open to the broader UCI community.
 
 ## Libraries/Technologies Used
 - Uvicorn
