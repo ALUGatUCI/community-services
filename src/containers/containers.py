@@ -3,7 +3,6 @@ import asyncio
 import fastapi
 import httpx
 from fastapi import Depends
-from sqlmodel import select
 
 import containers.responses as responses
 import database.containers as db_containers
@@ -62,6 +61,9 @@ async def delete_container_by_ucinetid(ucinetid: str):
         db_containers.delete_container(ucinetid)
 
     update_user(f"{ucinetid}@uci.edu", has__container=False)
+
+def get_container_count() -> int:
+    return len(client.containers.list())
 
 def _get_forward_ports(container: client.containers):
     used_ports = []
