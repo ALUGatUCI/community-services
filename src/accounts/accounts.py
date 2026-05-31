@@ -17,6 +17,8 @@ from accounts.body import ConfirmationCode, ContainerRequest
 from accounts.responses import AccountConfirmed
 from security import check_confirmation_status, discard_token
 from containers.containers import get_container_by_ucinetid
+from database.remote.actions import get_user
+
 
 from security import verify_credentials
 
@@ -163,6 +165,13 @@ async def create_account(account: Annotated[OAuth2PasswordRequestForm, fastapi.D
         raise fastapi.HTTPException(
             status_code=400,
             detail="Password must contain at least one punctuation"
+        )
+
+    remote_user = get_user(account.username)
+    if remote_user is not None and remote_user["hasContainer"]:
+        raise fastapi.HTTPException(
+            status_code=400,
+            detail="User already exists on another instance"
         )
 
     try:
