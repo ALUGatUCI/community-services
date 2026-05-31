@@ -31,3 +31,6 @@ class Container(sqlmodel.SQLModel, table=True):
 class AccountCreation(BaseModel):
     email: str
     password: SecretStr
+
+class ContainerRequest(BaseModel):
+    request_body: str
