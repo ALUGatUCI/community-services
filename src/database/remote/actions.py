@@ -11,3 +11,22 @@ def add_user(email: str, is_confirmed: bool = False, is_banned: bool = False):
     }
 
     collection.create(data)
+
+def delete_user(email: str):
+    collection = bridge.get_collection(read_config_file("pocketbase_collection"))
+    records = collection.get_list(1, 1, {"email": email})
+    if records.items:
+        collection.delete(records.items[0].id)
+    else:
+        raise ValueError(f"User with email {email} not found")
+
+def update_user(email: str, is_confirmed: bool, is_banned: bool):
+    collection = bridge.get_collection(read_config_file("pocketbase_collection"))
+    records = collection.get_list(1, 1, {"email": email})
+    if records.items:
+        collection.update(records.items[0].id, {
+            "isConfirmed": is_confirmed,
+            "isBanned": is_banned,
+        })
+    else:
+        raise ValueError(f"User with email {email} not found")
