@@ -32,6 +32,11 @@ from accounts.accounts import (
     get_account_by_id,
 )
 from configuration import configuration
+import database.remote.bridge as bridge
+
+# Load configuration and initialize remote services
+configuration.cache_config()
+bridge.initialize_pocketbase()
 
 # Create the database engine and session
 
