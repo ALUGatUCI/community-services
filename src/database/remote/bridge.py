@@ -10,3 +10,6 @@ user_data = client.collection("users").auth_with_password(
 
 if not user_data.is_valid:
     raise RuntimeError("Invalid credentials")
+
+def get_collection(collection_name):
+    return client.collection(collection_name)
