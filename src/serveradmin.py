@@ -16,13 +16,21 @@ from database.requests import (
     delete_request,
     get_all_requests,
 )
+from database.accounts import (
+    ban_account,
+    unban_account,
+    delete_account,
+)
 from containers.containers import (
     suspend_container_by_ucinetid,
     unsuspend_container_by_ucinetid,
     delete_container_by_ucinetid,
     get_container_count,
 )
-from accounts.accounts import get_all_accounts
+from accounts.accounts import (
+    get_all_accounts,
+    get_account_by_id,
+)
 from configuration import configuration
 
 # Create the database engine and session
@@ -75,10 +83,9 @@ async def entry_point():
             else:
                 print(f"Unknown list type: {arguments[2]}")
         if arguments[1] == "ban": # Ban a user with the given ID
-            user = session.get(Account, int(arguments[2]))
+            user = get_account_by_id(int(arguments[2]))
             if user is not None:
-                user.banned = True
-                session.commit()
+                ban_account(int(arguments[2]))
                 await suspend_container_by_ucinetid(user.email[:user.email.index("@")]) # Suspend the user's container
                 print(f"Banned user with ID {arguments[2]}")
             else:
@@ -86,8 +93,7 @@ async def entry_point():
         if arguments[1] == "unban": # Unban a user with the given ID
             user = session.get(Account, int(arguments[2]))
             if user is not None:
-                user.banned = False
-                session.commit()
+                unban_account(int(arguments[2]))
                 await unsuspend_container_by_ucinetid(user.email[:user.email.index("@")]) # Unsuspend the user's container
                 print(f"Unbanned user with ID {arguments[2]}")
             else:
@@ -98,8 +104,7 @@ async def entry_point():
                 request = session.get(Request, int(arguments[3]))
                 if request is not None:
                     await not_selected_email(request.id, session)
-                    session.delete(request)
-                    session.commit()
+                    delete_request(request.id)
                     print(f"Deleted request with ID {arguments[3]}")
                 else:
                     print(f"No request found with ID {arguments[3]}")
@@ -107,8 +112,7 @@ async def entry_point():
                 user = session.get(Account, int(arguments[3]))
                 if user is not None:
                     await delete_container_by_ucinetid(user.email[:user.email.index("@")]) # Delete the container associated with the user
-                    session.delete(user)
-                    session.commit()
+                    delete_account(int(arguments[3]))
                     print(f"Deleted user with ID {arguments[3]}")
                 else:
                     print(f"No user found with ID {arguments[3]}")

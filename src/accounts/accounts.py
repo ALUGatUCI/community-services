@@ -29,6 +29,12 @@ router = fastapi.APIRouter()
 def get_all_accounts() -> list[Account]:
     return get_all_accounts_db()
 
+def get_account_by_id(account_id: int) -> Account | None:
+    session = database.session
+    statement = sqlmodel.select(Account).where(Account.id == account_id)
+    result = session.exec(statement).one_or_none()
+    return result
+
 @router.post("/confirm")
 async def confirm_account(token: Request, inputted_code: ConfirmationCode = Depends()):
     ucinetid = verify_credentials(token)

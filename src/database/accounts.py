@@ -1,5 +1,6 @@
 import string
 from datetime import datetime, timedelta, timezone
+from this import d
 from pydantic import BaseModel
 import sqlmodel
 import jwt
@@ -105,3 +106,27 @@ def get_all_accounts_db() -> list[Account]:
     statement = sqlmodel.select(Account)
     result = session.exec(statement).all()
     return result
+
+def ban_account(account_id: int):
+    session = database.session
+    statement = sqlmodel.select(Account).where(Account.id == account_id)
+    result = session.exec(statement).one_or_none()
+    if result:
+        result.banned = True
+        session.commit()
+
+def unban_account(account_id: int):
+    session = database.session
+    statement = sqlmodel.select(Account).where(Account.id == account_id)
+    result = session.exec(statement).one_or_none()
+    if result:
+        result.banned = False
+        session.commit()
+
+def delete_account(account_id: int):
+    session = database.session
+    statement = sqlmodel.select(Account).where(Account.id == account_id)
+    result = session.exec(statement).one_or_none()
+    if result:
+        session.delete(result)
+        session.commit()
