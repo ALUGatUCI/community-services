@@ -13,7 +13,6 @@ This project provides the software-side aspect of ALUG@UCI Community Services, w
 ## Things that must be implemented:
 - Implement email-based 2FA
 - Cleaner web user interface (UI/UX)
-- Implement Pocketbase support to prevent duplicate account creation across different sessions
 - Switch over to Docker Compose
 
 ## Setting up a configuration
