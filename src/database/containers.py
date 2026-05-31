@@ -7,6 +7,7 @@ import configuration
 from database.models import Account
 from database.models import Container
 import database.database as database
+from database.database import session
 from containers.core import client
 from security.shacrypt512 import shacrypt
 from containers.containers import httpx_client
@@ -108,6 +109,11 @@ def delete_container(ucinetid: str):
     statement_2 = delete(Container).where(Container.id == account_id)
     session.exec(statement_2)
     session.commit()
+
+def get_container_count() -> int:
+    """Get the number of containers on the server"""
+    statement = select(func.count()).select_from(Container)
+    return session.execute(statement).one()[0]
 
 def get_valid_ports(ucinetid: str):
     """Get valid ports for the user's container"""
