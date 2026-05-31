@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import pathlib
 import sqlmodel
 from sqlmodel import select, func
 import sys
