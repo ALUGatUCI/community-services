@@ -8,6 +8,7 @@ from accounts.accounts import login_to_account, router as accounts
 from containers import router as containers
 from configuration import configuration
 from database import database
+from database.remote.bridge import initialize_pocketbase
 import platform
 import sys
 import os
@@ -26,6 +27,12 @@ def on_startup():
         database.create_db_and_tables()
     except Exception as e:
         print(f"Error creating database tables: {e}")
+        sys.exit(1)
+
+    try:
+        initialize_pocketbase()
+    except Exception as e:
+        print(f"Error initializing PocketBase: {e}")
         sys.exit(1)
 
 @app.post("/token")
