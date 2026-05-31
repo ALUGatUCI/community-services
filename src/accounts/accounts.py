@@ -19,11 +19,15 @@ from security import check_confirmation_status, discard_token
 from containers.containers import get_container_by_ucinetid
 from database.remote.actions import get_user, update_user
 from database.requests import create_request
+from database.accounts import get_all_accounts_db
 
 
 from security import verify_credentials
 
 router = fastapi.APIRouter()
+
+def get_all_accounts() -> list[Account]:
+    return get_all_accounts_db()
 
 @router.post("/confirm")
 async def confirm_account(token: Request, inputted_code: ConfirmationCode = Depends()):

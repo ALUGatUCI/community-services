@@ -99,3 +99,9 @@ def perform_login(email: str, password: str):
         raise exceptions.AccountBannedError()
 
     return access_token
+
+def get_all_accounts_db() -> list[Account]:
+    session = database.session
+    statement = sqlmodel.select(Account)
+    result = session.exec(statement).all()
+    return result
