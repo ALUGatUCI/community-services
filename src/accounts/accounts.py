@@ -144,7 +144,7 @@ async def create_account(account: Annotated[OAuth2PasswordRequestForm, fastapi.D
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
     # Check if the account is already registered on another instance and has a container
-    remote_user = get_user(account.username)
+    remote_user = get_user(f"{account.username}@uci.edu")
 
     # Check if the account is banned on another instance
     # If the account is banned, raise an exception and do not register the account
