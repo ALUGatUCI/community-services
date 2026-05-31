@@ -9,7 +9,7 @@ from database.models import Container
 import database.database as database
 from containers.core import client
 from security.shacrypt512 import shacrypt
-from src.containers.containers import httpx_client
+from containers.containers import httpx_client
 
 
 async def create_new_container(account_id: int):
