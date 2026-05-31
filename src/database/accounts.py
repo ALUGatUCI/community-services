@@ -1,6 +1,5 @@
 import string
 from datetime import datetime, timedelta, timezone
-from this import d
 from pydantic import BaseModel
 import sqlmodel
 import jwt
@@ -9,6 +8,7 @@ from database.models import Account
 import database.database as database
 from communications import send_email
 import database.exceptions as exceptions
+from database.remote import update_user, delete_user
 import asyncio
 import random
 import fastapi
@@ -115,6 +115,9 @@ def ban_account(account_id: int):
         result.banned = True
         session.commit()
 
+        # Update the user's status to banned on Pocketbase
+        update_user(email=result.email, is_banned=True)
+
 def unban_account(account_id: int):
     session = database.session
     statement = sqlmodel.select(Account).where(Account.id == account_id)
@@ -123,6 +126,9 @@ def unban_account(account_id: int):
         result.banned = False
         session.commit()
 
+        # Update the user's status to unbanned on Pocketbase
+        update_user(email=result.email, is_banned=False)
+
 def delete_account(account_id: int):
     session = database.session
     statement = sqlmodel.select(Account).where(Account.id == account_id)
@@ -130,3 +136,6 @@ def delete_account(account_id: int):
     if result:
         session.delete(result)
         session.commit()
+
+        # Delete the user from Pocketbase
+        delete_user(email=result.email)
