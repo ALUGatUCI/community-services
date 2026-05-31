@@ -24,6 +24,7 @@ def _verify_config():
         "pocketbase_url",
         "pocketbase_username",
         "pocketbase_password",
+        "pocketbase_collection"
     ]
 
     for key in required_keys:
