@@ -1,15 +1,19 @@
 from configuration import read_config_file
 from pocketbase import PocketBase
 
-client = PocketBase(read_config_file("pocketbase_url"))
+client = None
 
-user_data = client.collection("users").auth_with_password(
-    read_config_file("pocketbase_username"),
-    read_config_file("pocketbase_password"),
-)
+def initialize_pocketbase():
+    global client
+    client = PocketBase(read_config_file("pocketbase_url"))
 
-if not user_data.is_valid:
-    raise RuntimeError("Invalid credentials")
+    user_data = client.admins.auth_with_password(
+        read_config_file("pocketbase_username"),
+        read_config_file("pocketbase_password"),
+    )
+
+    if not user_data.is_valid:
+        raise RuntimeError("Invalid credentials")
 
 def get_collection(collection_name):
     return client.collection(collection_name)
