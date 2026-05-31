@@ -10,7 +10,12 @@ from database.database import create_db_and_tables
 from database.models import Request, Account
 from database.containers import create_new_container
 from database.requests import get_request_by_id
-from containers.containers import suspend_container_by_ucinetid, unsuspend_container_by_ucinetid, delete_container_by_ucinetid
+from containers.containers import (
+    suspend_container_by_ucinetid,
+    unsuspend_container_by_ucinetid,
+    delete_container_by_ucinetid,
+    get_container_count,
+)
 from configuration import configuration
 
 # Create the database engine and session
@@ -30,13 +35,10 @@ async def entry_point():
             else:
                 print(f"No request found with ID {arguments[2]}")
         if arguments[1] == "approve": # Approve a request with the given ID
-            # Check if there is anymore space for accounts
+            # Check if there is anymore space for containers
             if configuration.read_config_file("acc_limit") is not None:
-                statement = select(func.count()).select_from(Account)
-                result = session.execute(statement).one()[0]
-
                 acc_limit = configuration.read_config_file("acc_limit")
-                if acc_limit is not None and result >= int(acc_limit):
+                if acc_limit is not None and get_container_count() >= int(acc_limit):
                     print("Account limit on server reached")
                     sys.exit(1)
 
