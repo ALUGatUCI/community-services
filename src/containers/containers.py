@@ -13,6 +13,7 @@ import security
 from containers.body import AddPort, RemovePort
 from containers.core import client
 from database.models import Account, Container
+from database.remote.actions import update_user
 
 router = fastapi.APIRouter()
 
@@ -60,7 +61,7 @@ async def delete_container_by_ucinetid(ucinetid: str):
         # Delete container from the database
         db_containers.delete_container(ucinetid)
 
-    return None
+    update_user(f"{ucinetid}@uci.edu", has__container=False)
 
 def _get_forward_ports(container: client.containers):
     used_ports = []
