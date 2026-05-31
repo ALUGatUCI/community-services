@@ -6,14 +6,14 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from database import Container
 from database.accounts import Account, add_account_to_database, perform_login, send_confirmation_email
-from database.models import Request as RequestModel
+from database.models import ContainerRequest
 import database.database as database
 import database.exceptions as db_exceptions
 import sqlmodel
 from sqlmodel import select, delete
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from accounts.body import ConfirmationCode, ContainerRequest
+from accounts.body import ConfirmationCode
 from accounts.responses import AccountConfirmed
 from security import check_confirmation_status, discard_token
 from containers.containers import get_container_by_ucinetid
