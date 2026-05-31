@@ -11,6 +11,7 @@ from database.database import session
 from containers.core import client
 from security.shacrypt512 import shacrypt
 from containers.containers import httpx_client
+from database.remote.actions import update_user
 
 
 async def create_new_container(account_id: int):
@@ -97,6 +98,9 @@ async def create_new_container(account_id: int):
     session.commit()
     session.refresh(new_container)
 
+    # Let Pocketbase know the container is ready
+    update_user(email=f"{ucinetid}@uci.edu", has_container=True)
+
 def delete_container(ucinetid: str):
     """Deletes the container associated with the given UCINETID."""
     database.create_db_and_tables()
@@ -109,6 +113,8 @@ def delete_container(ucinetid: str):
     statement_2 = delete(Container).where(Container.id == account_id)
     session.exec(statement_2)
     session.commit()
+
+    update_user(email=f"{ucinetid}@uci.edu", has_container=False)
 
 def get_container_count() -> int:
     """Get the number of containers on the server"""
