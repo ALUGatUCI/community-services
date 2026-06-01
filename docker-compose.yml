@@ -1,0 +1,27 @@
+name: alug-community-services
+
+services:
+  server:
+    image: python:3.14-slim
+    working_dir: /usr/local/alugvps-server
+    # Install deps, then enable execution and run
+    command: >
+      sh -c "pip install --no-cache-dir -r /tmp/requirements.txt &&
+             python3 alugvps-server.py"
+    environment:
+      - PATH=/usr/local/alugvps-server:$PATH
+    env_file:
+      - .env
+    ports:
+      - "${port}:${port}"
+    volumes:
+      - ./src:/usr/local/alugvps-server          # application code
+      - ./requirements.txt:/tmp/requirements.txt  # dependency manifest
+      - db-data:/var/lib/alugvps-server           # persist the SQLite database
+      # Bind-mount the host LXD socket so pylxd.Client() can reach LXD.
+      # Adjust the host path to match your install (snap shown here).
+      - /var/snap/lxd/common/lxd/unix.socket:/var/snap/lxd/common/lxd/unix.socket
+    restart: unless-stopped
+
+volumes:
+  db-data:
