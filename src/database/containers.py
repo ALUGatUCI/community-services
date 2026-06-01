@@ -10,7 +10,6 @@ import database.database as database
 from database.database import session
 from containers.core import client
 from security.shacrypt512 import shacrypt
-from containers.containers import httpx_client
 from database.remote.actions import update_user
 
 
