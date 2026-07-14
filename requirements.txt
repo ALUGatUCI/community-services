@@ -1,9 +1,0 @@
-pylxd
-fastapi[standard]
-pyjwt
-pwdlib[argon2]
-sqlmodel
-uvicorn
-python-dotenv
-aiosmtplib
-pocketbase
