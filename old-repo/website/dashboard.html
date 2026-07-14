@@ -1,0 +1,45 @@
+<!doctype html>
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dashboard - ALUG@UCI VPS Services</title>
+        <link rel="stylesheet" href="styles.css" />
+        <script src="core.js"></script>
+        <script type="module" src="dashboard/dashboard.js"></script>
+        <script type="module" src="dashboard/portManagement.js"></script>
+    </head>
+
+    <body>
+        <div class="vertical-container">
+            <h1>Dashboard</h1>
+            <p>Welcome to your dashboard! Here you can manage your VPS.</p>
+            <p>Access your VPS via SSH: <code><span id="sshAddress"></span></code></p>
+            <!-- Placeholder for SSH address -->
+
+            <h2>Actions</h2>
+            <p>Container Status: <span id="containerStatus">Unknown</span></p>
+            <button type="button" id="start">Start VPS</button>
+            <button type="button" id="stop">Stop VPS</button>
+            <button type="button" id="reboot">Reboot VPS</button>
+
+            <h2>Ports</h2>
+            <ul id="ports-list"></ul>
+
+            <h2>Add Port</h2>
+            <form id="port-form">
+                <input type="text" id="port-name" placeholder="Port Name" />
+                <select id="listening-port"></select>
+                <input
+                    type="dropdown"
+                    id="connect-port"
+                    placeholder="Connect Port"
+                />
+                <button type="button" id="submit-port">Add Port</button>
+            </form>
+            <br />
+            <button type="button" id="logout">Logout</button>
+        </div>
+    </body>
+</html>

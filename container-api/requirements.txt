@@ -1,0 +1,12 @@
+# LXD Communication Socket
+pylxd
+
+# FastAPI Libraries
+fastapi[standard]
+uvicorn
+
+# Database Connection
+psycopg[binary]
+
+# Configuration Reader
+python-dotenv

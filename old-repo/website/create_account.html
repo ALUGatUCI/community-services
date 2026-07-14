@@ -1,0 +1,28 @@
+<!doctype html>
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Create Account - ALUG@UCI VPS Services</title>
+        <link rel="stylesheet" href="styles.css" />
+        <script src="core.js"></script>
+        <script type="module" src="createAccount/createAccount.js"></script>
+    </head>
+
+    <body>
+        <div class="vertical-container">
+            <h1>Create Account</h1>
+            <form>
+                <label for="username">UCI Email:</label>
+                <input type="text" id="username" name="username" /><br /><br />
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" /><br /><br />
+                <input type="checkbox" id="agree" name="agree" /><label for="agree">I agree to the terms and conditions</label>
+                <br>
+                <br>
+                <button id="submit" type="button" value="Create Account">Create Account</button>
+            </form>
+        </div>
+    </body>
+</html>

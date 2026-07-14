@@ -1,0 +1,5 @@
+# ALUG@UCI VPS Services Website
+This is the front-end component of ALUG@UCI VPS Services that users will use to interact with,
+request containers, and manage them. It is intended to run on the same server as the [back-end component](https://github.com/ALUGatUCI/alugvps-server) of ALUG@UCI VPS Services.
+
+It is written in HTML, CSS, and Javascript.
