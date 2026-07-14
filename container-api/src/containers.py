@@ -1,30 +1,16 @@
 import asyncio
 
 import fastapi
-import httpx
+from fastapi import Request
 from fastapi import Depends
 
-import containers.responses as responses
-import database.containers as db_containers
-import database.database as database
-from fastapi import Request
-import security
-from containers.body import AddPort, RemovePort
-from containers.core import client
-from database.models import Account, Container
-from database.remote.actions import update_user
+import responses as responses
+from body import AddPort, RemovePort
+from core import client
+
+from pylxd.managers import ContainerManager
 
 router = fastapi.APIRouter()
-
-public_ip = None
-# Get the public IP address of the server
-with httpx.Client() as httpx_client:
-    try:
-        response = httpx_client.get("https://api.ipify.org?format=json")
-        response.raise_for_status()
-        public_ip = response.json()["ip"]
-    except:
-        public_ip = None
 
 async def get_container_by_ucinetid(ucinetid: str):
     containers = await asyncio.to_thread(client.containers.all)
@@ -57,15 +43,12 @@ async def delete_container_by_ucinetid(ucinetid: str):
             await asyncio.to_thread(container.stop, wait=True)
 
         await asyncio.to_thread(container.delete, wait=True)
-        # Delete container from the database
-        db_containers.delete_container(ucinetid)
-
-    update_user(f"{ucinetid}@uci.edu", has__container=False)
 
 def get_container_count() -> int:
-    return db_containers.get_container_count()
+    # Fix with proper implementation
+    return 0
 
-def _get_forward_ports(container: client.containers):
+def _get_forward_ports(container: ContainerManager):
     used_ports = []
 
     for device in container.devices.items():
@@ -74,15 +57,9 @@ def _get_forward_ports(container: client.containers):
 
     return used_ports
 
-
 @router.get("/exists")
-async def check_container_exists(token: Request):
+async def check_container_exists(ucinetid: str):
     """Checks if a container exists for the account"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     container = await get_container_by_ucinetid(ucinetid)
 
     if container is None:
@@ -92,13 +69,8 @@ async def check_container_exists(token: Request):
 
 
 @router.get("/address", response_model=responses.ContainerAddress)
-async def get_container_connection_port(token: Request):
+async def get_container_connection_port(ucinetid: str):
     """Get the address of the account's container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if await get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -118,13 +90,8 @@ async def get_container_connection_port(token: Request):
 
 
 @router.get("/status", response_model=responses.ContainerStatus)
-async def container_status(token: Request):
+async def container_status(ucinetid: str):
     """Get the status of the current container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     container = await get_container_by_ucinetid(ucinetid)
     if container is None:
         raise fastapi.HTTPException(
@@ -142,13 +109,8 @@ async def container_status(token: Request):
 
 
 @router.put("/start", response_model=responses.ContainerAction)
-async def container_start(token: Request):
+async def container_start(ucinetid: str):
     """Start the named container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -171,13 +133,8 @@ async def container_start(token: Request):
 
 
 @router.put("/stop", response_model=responses.ContainerAction)
-async def container_stop(token: Request):
+async def container_stop(ucinetid: str):
     """Stop the named container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -200,13 +157,8 @@ async def container_stop(token: Request):
 
 
 @router.put("/restart", response_model=responses.ContainerAction)
-async def container_restart(token: Request):
+async def container_restart(ucinetid: str):
     """Restart the named container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -229,14 +181,8 @@ async def container_restart(token: Request):
 
 
 @router.post("/port/add", response_model=responses.ContainerAction)
-async def add_port(token: Request, new_forward: AddPort = Depends(),):
+async def add_port(ucinetid: str, new_forward: AddPort = Depends(),):
     """Add forward port to the container"""
-
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -294,16 +240,8 @@ async def add_port(token: Request, new_forward: AddPort = Depends(),):
 
 
 @router.delete("/port/delete", response_model=responses.ContainerAction)
-async def remove_port(
-    token: Request,
-    remove: RemovePort = Depends(),
-):
+async def remove_port(ucinetid: str, remove: RemovePort = Depends()):
     """Removes a specified port"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -332,13 +270,8 @@ async def remove_port(
 
 
 @router.get("/port/list", response_model=responses.PortsList)
-async def get_used_port_list(token: Request):
+async def get_used_port_list(ucinetid: str):
     """Retrieves a list of all used forwarding ports"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if await get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
@@ -353,13 +286,8 @@ async def get_used_port_list(token: Request):
 
 
 @router.get("/port/valid_ports", response_model=responses.ValidPorts)
-async def get_valid_ports(token: Request):
+async def get_valid_ports(ucinetid: str):
     """Get all valid ports for this container"""
-    ucinetid = security.verify_credentials(token)  # Verify the credentials (An exception will occur if not valid)
-
-    if not security.check_confirmation_status(ucinetid):
-        raise fastapi.HTTPException(status_code=400, detail="Inactive user")
-
     if await get_container_by_ucinetid(ucinetid) is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
