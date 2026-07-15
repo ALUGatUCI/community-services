@@ -1,13 +1,21 @@
 import fastapi
-from fastapi import Depends
+from fastapi import Depends, Header, HTTPException
 
 import responses as responses
 from body import AddPort, RemovePort
 
 import containers
 
-router = fastapi.APIRouter()
+import config
 
+import secrets
+
+def require_api_key(x_api_key: str = Header(default="")):
+    expected = config.get_env_var("INTERNAL_API_KEY")
+    if not expected or not secrets.compare_digest(x_api_key, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+router = fastapi.APIRouter(dependencies=[Depends(require_api_key)])
 
 @router.get("/exists")
 async def check_container_exists(ucinetid: str):
