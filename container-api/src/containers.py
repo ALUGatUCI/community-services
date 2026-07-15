@@ -7,6 +7,8 @@ import database
 
 import config
 
+from shacrypt import shacrypt
+
 from pylxd.managers import ContainerManager
 
 public_ip = config.get_env_var("PUBLIC_IP")
@@ -64,6 +66,92 @@ def _get_forward_ports(container: ContainerManager):
             used_ports.append(tuple(device))
 
     return used_ports
+
+
+async def create_new_container(ucinetid: str, password: str) -> None:
+    """Create and start a new container for the account.
+
+    The supplied password is used as the account's temporary login password
+    (hashed before it is handed to cloud-init). An SSH port is allocated so it
+    won't collide with existing containers, and the port assignments are
+    recorded in the database.
+    """
+    # Don't clobber an account that already has a container
+    if await _get_container_by_ucinetid(ucinetid) is not None:
+        raise ValueError(f"A container already exists for {ucinetid}")
+
+    # Allocate an SSH port that won't collide with existing containers by
+    # taking the highest assigned port and incrementing from there. The gap of
+    # 10 leaves room for each account's forward ports.
+    max_ssh_port = await database.get_max_ssh_port()
+    next_ssh_port = 10000 if max_ssh_port is None else max_ssh_port + 10
+    forward_ports = list(range(next_ssh_port + 1, next_ssh_port + 10))
+
+    # Use the given password as the temporary login password
+    hashed_password = shacrypt(password.encode("utf-8"))
+
+    container_config = {
+        "name": ucinetid,
+        "type": "container",
+        "ephemeral": False,
+        "source": {
+            "type": "image",
+            "fingerprint": config.get_env_var("FINGERPRINT_IMAGE"),
+        },
+        "config": {
+            "limits.cpu": f"{config.get_env_var('CPU_LIMIT')}",
+            "limits.memory": f"{config.get_env_var('RAM_LIMIT')}GiB",
+            "user.user-data": (
+                "#cloud-config\n"
+                "ssh_pwauth: True\n"
+                "users:\n"
+                f"  - name: {ucinetid}\n"                 # The username
+                "    sudo: ALL=(ALL) NOPASSWD:ALL\n"      # Gives the user sudo rights
+                "    shell: /bin/bash\n"
+                "    lock_passwd: false\n"                # Crucial: allows password login
+                f"    passwd: {hashed_password}\n"        # Hashed password
+                "chpasswd:\n"
+                "  list: |\n"
+                f"    {ucinetid}:{hashed_password}\n"     # Redundant but ensures it sets
+                "  expire: True\n"                        # Force a password change on first login
+                "runcmd:\n"
+                "  - systemctl enable --now ssh\n"
+            ),
+        },
+        "devices": {
+            "root": {
+                "type": "disk",
+                "path": "/",
+                "pool": "default",
+                "size": f"{config.get_env_var('DISK_LIMIT')}GiB",
+            },
+            # SSH Port Forwarding (Proxy Device)
+            "ssh-forward": {
+                "type": "proxy",
+                "listen": f"tcp:0.0.0.0:{next_ssh_port}",  # Port on the HOST
+                "connect": "tcp:127.0.0.1:22",  # Port inside the CONTAINER
+            },
+        },
+    }
+
+    # Create and start the actual container
+    instance = await asyncio.to_thread(
+        client.containers.create, container_config, wait=True
+    )
+    await asyncio.to_thread(instance.start)
+
+    # Record the port assignments only once the container is up. If this fails,
+    # tear the container back down so we don't leave an untracked instance.
+    try:
+        await database.insert_container(ucinetid, next_ssh_port, forward_ports)
+    except Exception:
+        await _delete_container_by_ucinetid(ucinetid)
+        raise
+
+
+async def get_container_count() -> int:
+    """Return the number of containers tracked on this node."""
+    return await database.get_container_count()
 
 
 async def container_exists(ucinetid: str) -> bool:

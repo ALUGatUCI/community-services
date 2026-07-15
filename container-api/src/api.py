@@ -2,7 +2,7 @@ import fastapi
 from fastapi import Depends, Header, HTTPException
 
 import responses as responses
-from body import AddPort, RemovePort
+from body import AddPort, RemovePort, CreateContainer
 
 import containers
 
@@ -16,6 +16,31 @@ def require_api_key(x_api_key: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 router = fastapi.APIRouter(dependencies=[Depends(require_api_key)])
+
+@router.post("/create", response_model=responses.ContainerAction)
+async def create_container(new_container: CreateContainer):
+    """Create and start a new container for the account"""
+    # Enforce the per-node account limit, if one is configured
+    acc_limit = config.get_env_var("ACC_LIMIT")
+    if acc_limit is not None and await containers.get_container_count() >= int(acc_limit):
+        raise fastapi.HTTPException(
+            status_code=503, detail="Account limit on server reached"
+        )
+
+    try:
+        await containers.create_new_container(
+            new_container.ucinetid, new_container.password
+        )
+    except ValueError as e:
+        # Raised when a container already exists for the account
+        raise fastapi.HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise fastapi.HTTPException(
+            status_code=500, detail=f"Failed to create container: {e}"
+        )
+
+    return responses.ContainerAction(success=True, message="Container created")
+
 
 @router.get("/exists")
 async def check_container_exists(ucinetid: str):

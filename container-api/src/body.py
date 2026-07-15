@@ -7,3 +7,7 @@ class AddPort(BaseModel):
 
 class RemovePort(BaseModel):
     name: str
+
+class CreateContainer(BaseModel):
+    ucinetid: str
+    password: str

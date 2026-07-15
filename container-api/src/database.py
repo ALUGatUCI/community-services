@@ -42,6 +42,38 @@ async def get_container_count() -> int:
     return count[0] if count else 0
 
 
+async def get_max_ssh_port() -> int | None:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT MAX(ssh_port) FROM containers;",
+            )
+            row = await cur.fetchone()
+
+    return row[0] if row else None
+
+
+async def insert_container(
+    ucinetid: str, ssh_port: int, forward_ports: list[int]
+) -> None:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "INSERT INTO containers (ucinetid, ssh_port, forward_ports) "
+                "VALUES (%s, %s, %s);",
+                (ucinetid, ssh_port, forward_ports),
+            )
+
+
+async def delete_container(ucinetid: str) -> None:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "DELETE FROM containers WHERE ucinetid = %s;",
+                (ucinetid,),
+            )
+
+
 async def get_ssh_port(ucinetid: str) -> int | None:
     async with pool.connection() as conn:
         async with conn.cursor() as cur:
