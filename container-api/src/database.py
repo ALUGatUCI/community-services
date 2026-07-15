@@ -30,3 +30,36 @@ def _ensure_tables_exist() -> None:
 
 _ensure_tables_exist()
 pool = AsyncConnectionPool(_conninfo(), open=False)
+
+async def get_container_count() -> int:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT COUNT(*) FROM containers",
+            )
+            count = await cur.fetchone()
+
+    return count[0] if count else 0
+
+
+async def get_ssh_port(ucinetid: str) -> int | None:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT ssh_port FROM containers WHERE ucinetid = %s;",
+                (ucinetid,)
+            )
+            row = await cur.fetchone()
+
+    return row[0] if row else None
+
+async def get_forward_ports(ucinetid: str) -> list[int]:
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT forward_ports FROM containers WHERE ucinetid = %s;",
+                (ucinetid,)
+            )
+            row = await cur.fetchone()
+
+    return row[0] if row else []
