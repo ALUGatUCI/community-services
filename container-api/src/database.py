@@ -5,11 +5,11 @@ from config import get_env_var
 
 def _conninfo() -> str:
     return (
-        f"host={get_env_var('db_host')} "
-        f"port={get_env_var('db_port')} "
-        f"dbname={get_env_var('db_dbname')} "
-        f"user={get_env_var('db_user')} "
-        f"password={get_env_var('db_password')}"
+        f"host={get_env_var('DB_HOST')} "
+        f"port={get_env_var('DB_PORT')} "
+        f"dbname={get_env_var('DB_DBNAME')} "
+        f"user={get_env_var('DB_USER')} "
+        f"password={get_env_var('DB_PASSWORD')}"
     )
 
 def _ensure_tables_exist() -> None:
