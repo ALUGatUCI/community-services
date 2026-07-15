@@ -42,6 +42,24 @@ async def create_container(new_container: CreateContainer):
     return responses.ContainerAction(success=True, message="Container created")
 
 
+@router.delete("/delete", response_model=responses.ContainerAction)
+async def delete_container(ucinetid: str):
+    """Stop and delete the named container"""
+    try:
+        result = await containers.delete_container(ucinetid)
+    except Exception as e:
+        raise fastapi.HTTPException(
+            status_code=500, detail=f"Failed to delete container: {e}"
+        )
+
+    if not result:
+        raise fastapi.HTTPException(
+            status_code=400, detail="No container found for this account"
+        )
+
+    return responses.ContainerAction(success=True, message="Container deleted")
+
+
 @router.get("/exists")
 async def check_container_exists(ucinetid: str):
     """Checks if a container exists for the account"""

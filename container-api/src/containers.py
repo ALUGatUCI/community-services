@@ -154,6 +154,21 @@ async def get_container_count() -> int:
     return await database.get_container_count()
 
 
+async def delete_container(ucinetid: str) -> bool:
+    """Stop and delete the account's container, and remove its port records.
+
+    Returns True if a container was deleted, False if no container exists for
+    the account.
+    """
+    if await _get_container_by_ucinetid(ucinetid) is None:
+        return False
+
+    await _delete_container_by_ucinetid(ucinetid)
+    await database.delete_container(ucinetid)
+
+    return True
+
+
 async def container_exists(ucinetid: str) -> bool:
     """Return whether a container exists for the account."""
     return await _get_container_by_ucinetid(ucinetid) is not None
