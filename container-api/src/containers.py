@@ -1,10 +1,6 @@
 import asyncio
+import enum
 
-import fastapi
-from fastapi import Depends
-
-import responses as responses
-from body import AddPort, RemovePort
 from core import client
 
 import database
@@ -13,11 +9,19 @@ import config
 
 from pylxd.managers import ContainerManager
 
-router = fastapi.APIRouter()
-
 public_ip = config.get_env_var("PUBLIC_IP")
 
-async def get_container_by_ucinetid(ucinetid: str):
+
+class AddPortResult(enum.Enum):
+    """Possible outcomes of attempting to add a forward port."""
+    OK = "ok"
+    NOT_FOUND = "not_found"
+    INVALID_PORT = "invalid_port"
+    IN_USE = "in_use"
+    RESERVED_NAME = "reserved_name"
+
+
+async def _get_container_by_ucinetid(ucinetid: str):
     containers = await asyncio.to_thread(client.containers.all)
 
     for container in containers:
@@ -26,22 +30,22 @@ async def get_container_by_ucinetid(ucinetid: str):
 
     return None
 
-async def suspend_container_by_ucinetid(ucinetid: str):
-    container = await get_container_by_ucinetid(ucinetid)
+async def _suspend_container_by_ucinetid(ucinetid: str):
+    container = await _get_container_by_ucinetid(ucinetid)
     if container is not None:
         await asyncio.to_thread(container.freeze)
 
     return None
 
-async def unsuspend_container_by_ucinetid(ucinetid: str):
-    container = await get_container_by_ucinetid(ucinetid)
+async def _unsuspend_container_by_ucinetid(ucinetid: str):
+    container = await _get_container_by_ucinetid(ucinetid)
     if container is not None:
         await asyncio.to_thread(container.unfreeze)
 
     return None
 
-async def delete_container_by_ucinetid(ucinetid: str):
-    container = await get_container_by_ucinetid(ucinetid)
+async def _delete_container_by_ucinetid(ucinetid: str):
+    container = await _get_container_by_ucinetid(ucinetid)
     if container is not None:
         # The container may already be stopped, so we use a try-except block to avoid errors
         if container.status.lower() != "exited":
@@ -49,7 +53,7 @@ async def delete_container_by_ucinetid(ucinetid: str):
 
         await asyncio.to_thread(container.delete, wait=True)
 
-async def get_container_count() -> int:
+async def _get_container_count() -> int:
     return await database.get_container_count()
 
 def _get_forward_ports(container: ContainerManager):
@@ -61,230 +65,157 @@ def _get_forward_ports(container: ContainerManager):
 
     return used_ports
 
-@router.get("/exists")
-async def check_container_exists(ucinetid: str):
-    """Checks if a container exists for the account"""
-    container = await get_container_by_ucinetid(ucinetid)
 
-    if container is None:
-        return responses.ContainerExists(success=True, exists=False)
-    else:
-        return responses.ContainerExists(success=True, exists=True)
+async def container_exists(ucinetid: str) -> bool:
+    """Return whether a container exists for the account."""
+    return await _get_container_by_ucinetid(ucinetid) is not None
 
 
-@router.get("/address", response_model=responses.ContainerAddress)
-async def get_container_connection_port(ucinetid: str):
-    """Get the address of the account's container"""
-    if await get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
+async def get_connection_address(ucinetid: str) -> str | None:
+    """Return the SSH connection address for the account's container.
 
-    # Now get the assigned port of the container
+    Returns None if no container exists for the account.
+    """
+    if await _get_container_by_ucinetid(ucinetid) is None:
+        return None
+
     port = await database.get_ssh_port(ucinetid)
 
-    return responses.ContainerAddress(success=True, address=f"ssh {ucinetid}@{public_ip} -p {port}")
+    return f"ssh {ucinetid}@{public_ip} -p {port}"
 
 
-@router.get("/status", response_model=responses.ContainerStatus)
-async def container_status(ucinetid: str):
-    """Get the status of the current container"""
-    container = await get_container_by_ucinetid(ucinetid)
+async def get_container_status(ucinetid: str) -> str | None:
+    """Return the status of the account's container, or None if it does not exist."""
+    container = await _get_container_by_ucinetid(ucinetid)
     if container is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
+        return None
 
-    # Get the list of containers
-    containers = await asyncio.to_thread(client.containers.all)
-
-    for container in containers:
-        if container.name == ucinetid:
-            return responses.ContainerStatus(success=True, status=container.status)
-
-    return responses.ContainerStatus(success=False, status=None)
+    return container.status
 
 
-@router.put("/start", response_model=responses.ContainerAction)
-async def container_start(ucinetid: str):
-    """Start the named container"""
-    if get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
+async def start_container(ucinetid: str) -> bool | None:
+    """Start the account's container.
 
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            try:
-                await asyncio.to_thread(container.start)
-                return responses.ContainerAction(
-                    success=True, message="Sent start request"
-                )
-            except:
-                return responses.ContainerAction(
-                    success=True, message="Something went wrong"
-                )
-
-    return responses.ContainerAction(success=False, message="Server not found")
-
-
-@router.put("/stop", response_model=responses.ContainerAction)
-async def container_stop(ucinetid: str):
-    """Stop the named container"""
-    if get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
-
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            try:
-                await asyncio.to_thread(container.stop)
-                return responses.ContainerAction(
-                    success=True, message="Sent stop request"
-                )
-            except:
-                return responses.ContainerAction(
-                    success=False, message="Something went wrong"
-                )
-
-    return responses.ContainerAction(success=False, message="Server not found")
-
-
-@router.put("/restart", response_model=responses.ContainerAction)
-async def container_restart(ucinetid: str):
-    """Restart the named container"""
-    if get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
-
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            try:
-                await asyncio.to_thread(container.restart)
-                return responses.ContainerAction(
-                    success=True, message="Sent restart request"
-                )
-            except:
-                return responses.ContainerAction(
-                    success=False, message="Something went wrong"
-                )
-
-    return responses.ContainerAction(success=False, message="Server not found")
-
-
-@router.post("/port/add", response_model=responses.ContainerAction)
-async def add_port(ucinetid: str, new_forward: AddPort = Depends(),):
-    """Add forward port to the container"""
-    if get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
-
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            # Get forward ports of the container in question
-            forward_ports = await database.get_forward_ports(ucinetid)
-
-            # Now validate that the given listening port is in the list
-            if new_forward.listen not in forward_ports:
-                raise fastapi.HTTPException(
-                    status_code=400, detail="An invalid port was specified"
-                )
-
-            # Also validate that the port isn't already in use
-            for forward_port in _get_forward_ports(container):
-                if str(new_forward.listen) in forward_port[1]["listen"] and (
-                    new_forward.name != forward_port[0]
-                ):  # Triggers if listening port is the same and name isn't different
-                    raise fastapi.HTTPException(
-                        status_code=400, detail="The port is already in use"
-                    )
-
-            new_port_map = {
-                "type": "proxy",
-                "listen": f"tcp:0.0.0.0:{new_forward.listen}",  # Port on the HOST
-                "connect": f"tcp:127.0.0.1:{new_forward.connect}",  # Port inside the CONTAINER
-            }
-
-            # Prevent the user from overiding the CRITICAL devices
-            if new_forward.name != "ssh-port" and new_forward.name != "root":
-                container.devices[new_forward.name] = new_port_map
-                container.save()
-                return responses.ContainerAction(
-                    success=True, message="Sent forward port added"
-                )
-            else:
-                raise fastapi.HTTPException(
-                    status_code=403,
-                    detail="Attempted to add port with the same name as another device",
-                )
-
-
-@router.delete("/port/delete", response_model=responses.ContainerAction)
-async def remove_port(ucinetid: str, remove: RemovePort = Depends()):
-    """Removes a specified port"""
-    if get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
-
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            # Now check if the named port is in the devices dictioanary
-            # BE SURE THEY CANNOT REMOVE 'ssh-forward' or 'root' TO PREVENT INACCESSIBILITY
-            if (
-                remove.name != "ssh-forward"
-                and remove.name != "root"
-                and remove.name in container.devices.keys()
-            ):
-                del container.devices[remove.name]
-                container.save()
-
-                return responses.ContainerAction(
-                    success=True, message="Sent delete request"
-                )
-            else:
-                return responses.ContainerAction(
-                    success=False, message="Named port is invalid"
-                )
-
-
-@router.get("/port/list", response_model=responses.PortsList)
-async def get_used_port_list(ucinetid: str):
-    """Retrieves a list of all used forwarding ports"""
-    if await get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
-
-    containers = await asyncio.to_thread(client.containers.all)
-    for container in containers:
-        if container.name == ucinetid:
-            used_ports = _get_forward_ports(container)
-
-            return responses.PortsList(success=True, ports=used_ports)
-
-
-@router.get("/port/valid_ports", response_model=responses.ValidPorts)
-async def get_valid_ports(ucinetid: str):
-    """Get all valid ports for this container"""
-    if await get_container_by_ucinetid(ucinetid) is None:
-        raise fastapi.HTTPException(
-            status_code=400, detail="No container found for this account"
-        )
+    Returns True on success, False if the operation failed, or None if no
+    container exists for the account.
+    """
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
 
     try:
-        return responses.ValidPorts(
-            success=True, ports=database.get_forward_ports(ucinetid)
-        )
-    except Exception as e:
-        raise fastapi.HTTPException(
-            status_code=500, detail=f"An error occurred fetching for valid ports: {e}"
-        )
+        await asyncio.to_thread(container.start)
+        return True
+    except Exception:
+        return False
+
+
+async def stop_container(ucinetid: str) -> bool | None:
+    """Stop the account's container.
+
+    Returns True on success, False if the operation failed, or None if no
+    container exists for the account.
+    """
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    try:
+        await asyncio.to_thread(container.stop)
+        return True
+    except Exception:
+        return False
+
+
+async def restart_container(ucinetid: str) -> bool | None:
+    """Restart the account's container.
+
+    Returns True on success, False if the operation failed, or None if no
+    container exists for the account.
+    """
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    try:
+        await asyncio.to_thread(container.restart)
+        return True
+    except Exception:
+        return False
+
+
+async def add_forward_port(
+    ucinetid: str, name: str, listen: int, connect: int
+) -> AddPortResult:
+    """Add a forward port to the account's container.
+
+    Returns an AddPortResult describing the outcome.
+    """
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return AddPortResult.NOT_FOUND
+
+    # Validate that the given listening port is one of the account's allowed ports
+    forward_ports = await database.get_forward_ports(ucinetid)
+    if listen not in forward_ports:
+        return AddPortResult.INVALID_PORT
+
+    # Validate that the port isn't already in use
+    for forward_port in _get_forward_ports(container):
+        if str(listen) in forward_port[1]["listen"] and (
+            name != forward_port[0]
+        ):  # Triggers if listening port is the same and name isn't different
+            return AddPortResult.IN_USE
+
+    # Prevent the user from overiding the CRITICAL devices
+    if name == "ssh-port" or name == "root":
+        return AddPortResult.RESERVED_NAME
+
+    container.devices[name] = {
+        "type": "proxy",
+        "listen": f"tcp:0.0.0.0:{listen}",  # Port on the HOST
+        "connect": f"tcp:127.0.0.1:{connect}",  # Port inside the CONTAINER
+    }
+    container.save()
+
+    return AddPortResult.OK
+
+
+async def remove_forward_port(ucinetid: str, name: str) -> bool | None:
+    """Remove a named forward port from the account's container.
+
+    Returns True if the port was removed, False if the name was invalid, or
+    None if no container exists for the account.
+    """
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    # BE SURE THEY CANNOT REMOVE 'ssh-forward' or 'root' TO PREVENT INACCESSIBILITY
+    if (
+        name != "ssh-forward"
+        and name != "root"
+        and name in container.devices.keys()
+    ):
+        del container.devices[name]
+        container.save()
+        return True
+
+    return False
+
+
+async def list_forward_ports(ucinetid: str) -> list | None:
+    """Return the list of used forward ports, or None if no container exists."""
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    return _get_forward_ports(container)
+
+
+async def get_valid_ports(ucinetid: str) -> list[int] | None:
+    """Return the account's allowed forward ports, or None if no container exists."""
+    if await _get_container_by_ucinetid(ucinetid) is None:
+        return None
+
+    return await database.get_forward_ports(ucinetid)
