@@ -1,16 +1,21 @@
 import asyncio
 
 import fastapi
-from fastapi import Request
 from fastapi import Depends
 
 import responses as responses
 from body import AddPort, RemovePort
 from core import client
 
+import database
+
+import config
+
 from pylxd.managers import ContainerManager
 
 router = fastapi.APIRouter()
+
+public_ip = config.get_env_var("PUBLIC_IP")
 
 async def get_container_by_ucinetid(ucinetid: str):
     containers = await asyncio.to_thread(client.containers.all)
@@ -44,9 +49,8 @@ async def delete_container_by_ucinetid(ucinetid: str):
 
         await asyncio.to_thread(container.delete, wait=True)
 
-def get_container_count() -> int:
-    # Fix with proper implementation
-    return 0
+async def get_container_count() -> int:
+    return await database.get_container_count()
 
 def _get_forward_ports(container: ContainerManager):
     used_ports = []
@@ -77,14 +81,7 @@ async def get_container_connection_port(ucinetid: str):
         )
 
     # Now get the assigned port of the container
-    session = database.session
-
-    statement = (
-        select(Container.ssh_port)
-        .join(Account, Container.id == Account.id)
-        .where(Account.email == f"{ucinetid}@uci.edu")
-    )
-    port = session.exec(statement).first()
+    port = await database.get_ssh_port(ucinetid)
 
     return responses.ContainerAddress(success=True, address=f"ssh {ucinetid}@{public_ip} -p {port}")
 
@@ -191,21 +188,11 @@ async def add_port(ucinetid: str, new_forward: AddPort = Depends(),):
     containers = await asyncio.to_thread(client.containers.all)
     for container in containers:
         if container.name == ucinetid:
-            session = database.session
-
-            # Start by getting the account info
-            acc_statement = select(Account).where(
-                Account.email == f"{ucinetid}@uci.edu"
-            )
-            account = session.exec(acc_statement).first()
-
-            # Now get the ID to get the associated container's info
-            account_id = account.id
-            cont_statement = select(Container).where(Container.id == account_id)
-            container_data = session.exec(cont_statement).first()
+            # Get forward ports of the container in question
+            forward_ports = await database.get_forward_ports(ucinetid)
 
             # Now validate that the given listening port is in the list
-            if new_forward.listen not in container_data.forward_ports:
+            if new_forward.listen not in forward_ports:
                 raise fastapi.HTTPException(
                     status_code=400, detail="An invalid port was specified"
                 )
@@ -295,7 +282,7 @@ async def get_valid_ports(ucinetid: str):
 
     try:
         return responses.ValidPorts(
-            success=True, ports=db_containers.get_valid_ports(ucinetid)
+            success=True, ports=database.get_forward_ports(ucinetid)
         )
     except Exception as e:
         raise fastapi.HTTPException(
