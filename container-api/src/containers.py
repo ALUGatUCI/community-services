@@ -51,9 +51,6 @@ async def unsuspend_container_by_ucinetid(ucinetid: str):
 
     return None
 
-async def _get_container_count() -> int:
-    return await database.get_container_count()
-
 def _get_forward_ports(container: ContainerManager):
     used_ports = []
 
