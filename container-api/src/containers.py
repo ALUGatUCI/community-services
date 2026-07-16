@@ -156,8 +156,8 @@ async def get_container_count() -> int:
 
 async def at_limit() -> bool:
     acc_limit = config.get_env_var("ACC_LIMIT")
-    if acc_limit is not None:
-        raise ValueError("Could not get ACC_LIMIT")
+    if acc_limit is None:
+        return False
 
     return await get_container_count() >= int(acc_limit)
 
