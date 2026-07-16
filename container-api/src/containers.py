@@ -159,7 +159,12 @@ async def at_limit() -> bool:
     if acc_limit is None:
         return False
 
-    return await get_container_count() >= int(acc_limit)
+    try:
+        return await get_container_count() >= int(acc_limit)
+    except ValueError:
+        raise ValueError("Could not parse acc_limit")
+    except Exception as e:
+        raise e
 
 
 async def delete_container(ucinetid: str) -> bool:
