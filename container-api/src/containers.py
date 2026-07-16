@@ -37,20 +37,6 @@ async def _get_container_by_ucinetid(ucinetid: str):
 
     return None
 
-async def suspend_container_by_ucinetid(ucinetid: str):
-    container = await _get_container_by_ucinetid(ucinetid)
-    if container is not None:
-        await asyncio.to_thread(container.freeze)
-
-    return None
-
-async def unsuspend_container_by_ucinetid(ucinetid: str):
-    container = await _get_container_by_ucinetid(ucinetid)
-    if container is not None:
-        await asyncio.to_thread(container.unfreeze)
-
-    return None
-
 def _get_forward_ports(container: ContainerManager):
     used_ports = []
 
@@ -253,6 +239,30 @@ async def restart_container(ucinetid: str) -> bool | None:
 
     try:
         await asyncio.to_thread(container.restart)
+        return True
+    except Exception:
+        return False
+
+
+async def suspend_container(ucinetid: str) -> bool | None:
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    try:
+        await asyncio.to_thread(container.freeze)
+        return True
+    except Exception:
+        return False
+
+
+async def unsuspend_container(ucinetid: str) -> bool | None:
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
+        return None
+
+    try:
+        await asyncio.to_thread(container.unfreeze)
         return True
     except Exception:
         return False
