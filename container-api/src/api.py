@@ -71,7 +71,7 @@ async def check_container_exists(ucinetid: str):
 @router.get("/address", response_model=responses.ContainerAddress)
 async def get_container_connection_port(ucinetid: str):
     """Get the address of the account's container"""
-    address = await containers.get_connection_address(ucinetid)
+    address  = await containers.get_connection_address(ucinetid)
     if address is None:
         raise fastapi.HTTPException(
             status_code=400, detail="No container found for this account"
