@@ -163,6 +163,36 @@ async def container_restart(ucinetid: str):
     return responses.ContainerAction(success=False, message="Something went wrong")
 
 
+@router.put("/suspend", response_model=responses.ContainerAction)
+async def container_suspend(ucinetid: str):
+    """Suspend (freeze) the named container"""
+    result = await containers.suspend_container(ucinetid)
+    if result is None:
+        raise fastapi.HTTPException(
+            status_code=400, detail="No container found for this account"
+        )
+
+    if result:
+        return responses.ContainerAction(success=True, message="Sent suspend request")
+
+    return responses.ContainerAction(success=False, message="Something went wrong")
+
+
+@router.put("/unsuspend", response_model=responses.ContainerAction)
+async def container_unsuspend(ucinetid: str):
+    """Unsuspend (unfreeze) the named container"""
+    result = await containers.unsuspend_container(ucinetid)
+    if result is None:
+        raise fastapi.HTTPException(
+            status_code=400, detail="No container found for this account"
+        )
+
+    if result:
+        return responses.ContainerAction(success=True, message="Sent unsuspend request")
+
+    return responses.ContainerAction(success=False, message="Something went wrong")
+
+
 @router.post("/port/add", response_model=responses.ContainerAction)
 async def add_port(ucinetid: str, new_forward: AddPort = Depends(),):
     """Add forward port to the container"""

@@ -1,0 +1,10 @@
+import { NextResponse } from "next/server";
+
+import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+
+export async function POST() {
+  const response = NextResponse.json({ success: true });
+  // Expire the session cookie immediately.
+  response.cookies.set(SESSION_COOKIE, "", sessionCookieOptions(0));
+  return response;
+}
