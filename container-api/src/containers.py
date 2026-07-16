@@ -37,28 +37,19 @@ async def _get_container_by_ucinetid(ucinetid: str):
 
     return None
 
-async def _suspend_container_by_ucinetid(ucinetid: str):
+async def suspend_container_by_ucinetid(ucinetid: str):
     container = await _get_container_by_ucinetid(ucinetid)
     if container is not None:
         await asyncio.to_thread(container.freeze)
 
     return None
 
-async def _unsuspend_container_by_ucinetid(ucinetid: str):
+async def unsuspend_container_by_ucinetid(ucinetid: str):
     container = await _get_container_by_ucinetid(ucinetid)
     if container is not None:
         await asyncio.to_thread(container.unfreeze)
 
     return None
-
-async def _delete_container_by_ucinetid(ucinetid: str):
-    container = await _get_container_by_ucinetid(ucinetid)
-    if container is not None:
-        # The container may already be stopped, so we use a try-except block to avoid errors
-        if container.status.lower() != "exited":
-            await asyncio.to_thread(container.stop, wait=True)
-
-        await asyncio.to_thread(container.delete, wait=True)
 
 async def _get_container_count() -> int:
     return await database.get_container_count()
@@ -150,7 +141,7 @@ async def create_new_container(ucinetid: str, password: str) -> None:
     try:
         await database.insert_container(ucinetid, next_ssh_port, forward_ports)
     except Exception:
-        await _delete_container_by_ucinetid(ucinetid)
+        await delete_container(ucinetid)
         raise
 
 
@@ -178,10 +169,15 @@ async def delete_container(ucinetid: str) -> bool:
     Returns True if a container was deleted, False if no container exists for
     the account.
     """
-    if await _get_container_by_ucinetid(ucinetid) is None:
+    container = await _get_container_by_ucinetid(ucinetid)
+    if container is None:
         return False
 
-    await _delete_container_by_ucinetid(ucinetid)
+    # The container may already be stopped, so only stop it if it's running
+    if container.status.lower() != "exited":
+        await asyncio.to_thread(container.stop, wait=True)
+
+    await asyncio.to_thread(container.delete, wait=True)
     await database.delete_container(ucinetid)
 
     return True
