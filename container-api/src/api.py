@@ -210,7 +210,7 @@ async def add_port(ucinetid: str, new_forward: AddPort = Depends(),):
         )
     if result is containers.AddPortResult.IN_USE:
         raise fastapi.HTTPException(
-            status_code=400, detail="The port is already in use"
+            status_code=400, detail="That label is already in use"
         )
     if result is containers.AddPortResult.RESERVED_NAME:
         raise fastapi.HTTPException(
