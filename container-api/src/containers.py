@@ -1,7 +1,7 @@
 import asyncio
 import enum
 
-from core import client
+from pylxd import Client
 
 import database
 
@@ -12,6 +12,11 @@ from shacrypt import shacrypt
 from pylxd.managers import ContainerManager
 
 public_ip = config.get_env_var("PUBLIC_IP")
+
+try:
+    client = Client()
+except Exception as e:
+    raise RuntimeError(f"Failed to connect to LXC: {e}")
 
 
 class AddPortResult(enum.Enum):
