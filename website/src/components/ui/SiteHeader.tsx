@@ -8,7 +8,7 @@ export function SiteHeader() {
           href="/"
           className="font-semibold tracking-tight text-foreground no-underline"
         >
-          ALUG@UCI VPS Services
+          ALUG@UCI Community Services
         </Link>
       </div>
     </header>

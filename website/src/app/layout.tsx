@@ -14,8 +14,8 @@ const ubuntu = Ubuntu({
 
 export const metadata: Metadata = {
   title: {
-    default: "ALUG@UCI VPS Services",
-    template: "%s - ALUG@UCI VPS Services",
+    default: "ALUG@UCI Community Services",
+    template: "%s - ALUG@UCI Community Services",
   },
   description: "Manage your ALUG@UCI VPS container.",
 };

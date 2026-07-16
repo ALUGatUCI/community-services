@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         "Thank you for applying for a VPS. After reviewing your request, we " +
         "are unable to fulfill it at this time due to limited capacity.\n\n" +
         "Please feel free to apply again later. Thank you for your interest in " +
-        "ALUG@UCI Community VPS Services.",
+        "ALUG@UCI Community Services.",
     );
   } catch (emailError) {
     console.error("admin/reject: notification email failed:", emailError);

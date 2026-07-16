@@ -188,7 +188,7 @@ export async function POST(request: Request) {
         `Your temporary VPS password is: ${password}\n` +
         "You will be prompted to change it the first time you log in over " +
         "SSH.\n\n" +
-        "Thank you for using ALUG@UCI Community VPS Services.",
+        "Thank you for using ALUG@UCI Community Services.",
     );
   } catch (error) {
     console.error("approve: approval email failed:", error);
