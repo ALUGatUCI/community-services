@@ -34,8 +34,7 @@ router = fastapi.APIRouter(
 async def at_limit():
     """Check if the node has reached its limit on provisioned containers"""
     try:
-        acc_limit = config.get_env_var("ACC_LIMIT")
-        return responses.ContainerAtLimit(success=True, atLimit=await containers.get_container_count() >= int(acc_limit))
+        return responses.ContainerAtLimit(success=True, atLimit=await containers.at_limit())
     except Exception as e:
         raise fastapi.HTTPException(
             status_code=500, detail=f"Something went wrong getting the container limit: {e}"
@@ -45,8 +44,7 @@ async def at_limit():
 async def create_container(new_container: CreateContainer):
     """Create and start a new container for the account"""
     # Enforce the per-node account limit, if one is configured
-    acc_limit = config.get_env_var("ACC_LIMIT")
-    if acc_limit is not None and await containers.get_container_count() >= int(acc_limit):
+    if await containers.at_limit():
         raise fastapi.HTTPException(
             status_code=503, detail="Account limit on server reached"
         )
