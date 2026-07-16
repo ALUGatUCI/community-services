@@ -47,6 +47,15 @@ def _get_forward_ports(container: ContainerManager):
     return used_ports
 
 
+def _listen_port(device) -> int | None:
+    """Extract the host listen port from a proxy device, or None."""
+    listen = device.get("listen", "") if isinstance(device, dict) else ""
+    tail = listen.rsplit(":", 1)
+    if len(tail) == 2 and tail[1].isdigit():
+        return int(tail[1])
+    return None
+
+
 async def create_new_container(ucinetid: str, password: str) -> None:
     """Create and start a new container for the account.
 
@@ -284,16 +293,26 @@ async def add_forward_port(
     if listen not in forward_ports:
         return AddPortResult.INVALID_PORT
 
-    # Validate that the port isn't already in use
-    for forward_port in _get_forward_ports(container):
-        if str(listen) in forward_port[1]["listen"] and (
-            name != forward_port[0]
-        ):  # Triggers if listening port is the same and name isn't different
-            return AddPortResult.IN_USE
-
-    # Prevent the user from overiding the CRITICAL devices
-    if name == "ssh-port" or name == "root":
+    # Prevent the user from overriding the CRITICAL devices
+    if name in ("ssh-forward", "ssh-port", "root"):
         return AddPortResult.RESERVED_NAME
+
+    # A label may only belong to one forward: reject if it is already used by a
+    # device on a different listen port (which would otherwise be clobbered).
+    existing = container.devices.get(name)
+    if existing is not None and _listen_port(existing) != listen:
+        return AddPortResult.IN_USE
+
+    # One forward per allocated port: drop any existing forward on this listen
+    # port. This also handles renaming an existing forward's label.
+    for device_name in list(container.devices.keys()):
+        device = container.devices[device_name]
+        if (
+            device.get("type") == "proxy"
+            and device_name not in ("ssh-forward", "root")
+            and _listen_port(device) == listen
+        ):
+            del container.devices[device_name]
 
     container.devices[name] = {
         "type": "proxy",

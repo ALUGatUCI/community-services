@@ -37,9 +37,10 @@ function PortRow({
   name?: string;
   connect: string;
   busy: boolean;
-  onSave: (listen: number, name: string | undefined, connect: string) => void;
+  onSave: (listen: number, label: string, connect: string) => void;
   onClear: (name: string) => void;
 }) {
+  const [label, setLabel] = useState(name ?? String(listen));
   const [connect, setConnect] = useState(initialConnect);
   const configured = initialConnect !== "";
 
@@ -47,12 +48,22 @@ function PortRow({
     <div className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3">
       <code className="w-16 font-medium">{listen}</code>
       <label className="flex items-center gap-2 text-sm text-muted">
+        label
+        <input
+          type="text"
+          className="w-28"
+          placeholder={String(listen)}
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-muted">
         forwards to
         <input
           type="number"
           min={1}
           max={65535}
-          className="w-28"
+          className="w-24"
           placeholder="unused"
           value={connect}
           onChange={(event) => setConnect(event.target.value)}
@@ -63,7 +74,7 @@ function PortRow({
           variant="secondary"
           size="sm"
           disabled={busy}
-          onClick={() => onSave(listen, name, connect)}
+          onClick={() => onSave(listen, label, connect)}
         >
           Save
         </Button>
@@ -178,20 +189,39 @@ export default function Dashboard() {
   }
 
   const saveMapping = useCallback(
-    async (listen: number, name: string | undefined, connect: string) => {
+    async (listen: number, label: string, connect: string) => {
       const target = Number(connect.trim());
       if (!connect.trim() || !Number.isInteger(target) || target < 1 || target > 65535) {
         toast("Enter a port to forward to (1–65535).", "error");
         return;
       }
+      const name = label.trim() || String(listen);
+      if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+        toast("Labels can use only letters, numbers, hyphens, and underscores.", "error");
+        return;
+      }
+      if (["root", "ssh-forward", "ssh-port"].includes(name)) {
+        toast("That label is reserved.", "error");
+        return;
+      }
+      // Prevent reusing a label already assigned to a different port.
+      const takenByOther = ports.some(
+        ([n, device]) =>
+          n === name && Number(getPortAddress(device.listen)) !== listen,
+      );
+      if (takenByOther) {
+        toast("That label is already used by another port.", "error");
+        return;
+      }
+
       setWorking(true);
       try {
-        // Reuse the existing device name when editing; otherwise name it after
-        // the listen port.
-        const data = await addPort(name ?? String(listen), String(listen), String(target));
+        // The container-api replaces whatever is currently on this listen port,
+        // so this also renames an existing forward's label.
+        const data = await addPort(name, String(listen), String(target));
         toast(
           data.success
-            ? `Port ${listen} now forwards to ${target}.`
+            ? `Port ${listen} (${name}) now forwards to ${target}.`
             : data.detail ?? "Could not save the port.",
           data.success ? "success" : "error",
         );
@@ -200,7 +230,7 @@ export default function Dashboard() {
         setWorking(false);
       }
     },
-    [toast, refreshPortsSoon],
+    [toast, refreshPortsSoon, ports],
   );
 
   const clearMapping = useCallback(
@@ -279,7 +309,7 @@ export default function Dashboard() {
               const cfg = configuredByListen[listen];
               return (
                 <PortRow
-                  key={`${listen}:${cfg?.connect ?? ""}`}
+                  key={`${listen}:${cfg?.name ?? ""}:${cfg?.connect ?? ""}`}
                   listen={listen}
                   name={cfg?.name}
                   connect={cfg?.connect ?? ""}
