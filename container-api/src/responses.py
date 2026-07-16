@@ -8,6 +8,10 @@ class ContainerStatus(BaseModel):
     success: bool
     status: str
 
+class ContainerAtLimit(BaseModel):
+    success: bool
+    atLimit: bool
+
 class ContainerAction(BaseModel):
     success: bool
     message: str

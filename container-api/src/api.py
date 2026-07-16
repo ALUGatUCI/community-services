@@ -30,6 +30,17 @@ router = fastapi.APIRouter(
     dependencies=[Depends(accept_connections_from), Depends(require_api_key)]
 )
 
+@router.get("/at_limit", response_model=responses.ContainerAtLimit)
+async def at_limit():
+    """Check if the node has reached its limit on provisioned containers"""
+    try:
+        acc_limit = config.get_env_var("ACC_LIMIT")
+        return responses.ContainerAtLimit(success=True, atLimit=await containers.get_container_count() >= int(acc_limit))
+    except Exception as e:
+        raise fastapi.HTTPException(
+            status_code=500, detail=f"Something went wrong getting the container limit: {e}"
+        )
+
 @router.post("/create", response_model=responses.ContainerAction)
 async def create_container(new_container: CreateContainer):
     """Create and start a new container for the account"""
