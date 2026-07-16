@@ -1,5 +1,5 @@
 import fastapi
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 
 import responses as responses
 from body import AddPort, RemovePort, CreateContainer
@@ -15,7 +15,20 @@ def require_api_key(x_api_key: str = Header(default="")):
     if not expected or not secrets.compare_digest(x_api_key, expected):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-router = fastapi.APIRouter(dependencies=[Depends(require_api_key)])
+def accept_connections_from(request: Request):
+    """Only accept requests originating from an allowlisted IP address."""
+    allowed = config.get_env_var("ALLOWED_IP")
+    if not allowed:
+        # No allowlist configured — fail closed rather than accept everyone.
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    client_ip = request.client.host if request.client else None
+    if client_ip != allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+router = fastapi.APIRouter(
+    dependencies=[Depends(accept_connections_from), Depends(require_api_key)]
+)
 
 @router.post("/create", response_model=responses.ContainerAction)
 async def create_container(new_container: CreateContainer):
