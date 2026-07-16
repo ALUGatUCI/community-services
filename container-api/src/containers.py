@@ -154,6 +154,14 @@ async def get_container_count() -> int:
     return await database.get_container_count()
 
 
+async def at_limit() -> bool:
+    acc_limit = config.get_env_var("ACC_LIMIT")
+    if acc_limit is not None:
+        raise ValueError("Could not get ACC_LIMIT")
+
+    return await get_container_count() >= int(acc_limit)
+
+
 async def delete_container(ucinetid: str) -> bool:
     """Stop and delete the account's container, and remove its port records.
 
