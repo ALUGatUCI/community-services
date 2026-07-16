@@ -35,6 +35,10 @@ async def at_limit():
     """Check if the node has reached its limit on provisioned containers"""
     try:
         return responses.ContainerAtLimit(success=True, atLimit=await containers.at_limit())
+    except ValueError:
+        raise fastapi.HTTPException(
+            status_code=500, detail=f"There is a misconfigured account limit on the server"
+        )
     except Exception as e:
         raise fastapi.HTTPException(
             status_code=500, detail=f"Something went wrong getting the container limit: {e}"
