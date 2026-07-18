@@ -10,4 +10,4 @@ that communicates with the different tenant nodes in the cluster and interacts w
 
 The Supabase database contains user accounts, login codes, nodes, and container requests. User accounts are only created when a container is provisioned and contain account status and container location. 
 
-The Container API runs on each node to facilitate container interaction and provisioning via LXD and a PostgreSQL database that container data.
+The Container API runs on each node to facilitate container interaction and provisioning via LXD and a PostgreSQL database holding container data, such as the SSH port and available forward ports.
