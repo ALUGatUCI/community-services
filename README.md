@@ -6,11 +6,8 @@ the ability to host their own services open to the UCI community.
 ![Architecture Diagram](Architecture.png)
 
 The website (/website) is a Next.JS app that contains the frontend that enables user interaction and a backend
-that communicates with the different tenant hosts and interacts with the database hosted on Supabase.
+that communicates with the different tenant nodes in the cluster and interacts with the database hosted on Supabase.
 
-The Supabase database contains user accounts and container requests. User accounts are only created when a container
-is provisioned and contain account status and container location.
+The Supabase database contains user accounts, login codes, nodes, and container requests. User accounts are only created when a container is provisioned and contain account status and container location. 
 
-The Container API routes requests to a node within a cluster and facilitates container management.
-
-Each node has a local PostgreSQL database that contains relevant information, such as the SSH port and available ports
+The Container API runs on each node to facilitate container interaction and provisioning via LXD and a PostgreSQL database that container data.
